@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "pleme-attestation-framework.fullname" . }}-test
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "pleme-attestation-framework.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: framework-test
+      image: curlimages/curl:8.5.0
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "=== Pleme Attestation Framework Health Check ==="
+          PASS=0
+          FAIL=0
+
+          check_endpoint() {
+            local name="$1"
+            local url="$2"
+            echo -n "  Checking $name... "
+            if curl -sf --connect-timeout 5 --max-time 10 "$url" > /dev/null 2>&1; then
+              echo "OK"
+              PASS=$((PASS + 1))
+            else
+              echo "FAIL"
+              FAIL=$((FAIL + 1))
+            fi
+          }
+
+          {{- if index .Values "sekiban" "enabled" }}
+          echo ""
+          echo "--- sekiban ---"
+          check_endpoint "sekiban health" "http://{{ .Release.Name }}-sekiban-webhook.{{ .Values.namespace }}.svc:{{ index .Values "sekiban" "service" "healthPort" }}/healthz"
+          check_endpoint "sekiban ready" "http://{{ .Release.Name }}-sekiban-webhook.{{ .Values.namespace }}.svc:{{ index .Values "sekiban" "service" "healthPort" }}/readyz"
+          {{- end }}
+
+          {{- if index .Values "kensa" "enabled" }}
+          echo ""
+          echo "--- kensa ---"
+          check_endpoint "kensa health" "http://{{ .Release.Name }}-kensa.{{ .Values.namespace }}.svc:{{ index .Values "kensa" "service" "port" }}/health"
+          check_endpoint "kensa ready" "http://{{ .Release.Name }}-kensa.{{ .Values.namespace }}.svc:{{ index .Values "kensa" "service" "port" }}/ready"
+          {{- end }}
+
+          {{- if index .Values "tameshi-watch" "enabled" }}
+          echo ""
+          echo "--- tameshi-watch ---"
+          check_endpoint "tameshi-watch health" "http://{{ .Release.Name }}-tameshi-watch.{{ .Values.namespace }}.svc:{{ index .Values "tameshi-watch" "health" "port" }}/healthz"
+          check_endpoint "tameshi-watch ready" "http://{{ .Release.Name }}-tameshi-watch.{{ .Values.namespace }}.svc:{{ index .Values "tameshi-watch" "health" "port" }}/readyz"
+          {{- end }}
+
+          echo ""
+          echo "=== Results: $PASS passed, $FAIL failed ==="
+
+          if [ "$FAIL" -gt 0 ]; then
+            echo "FRAMEWORK HEALTH CHECK FAILED"
+            exit 1
+          fi
+
+          echo "ALL COMPONENTS HEALTHY"

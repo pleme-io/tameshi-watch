@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tameshi-watch.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tameshi-watch.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "tameshi-watch.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: health
+      port: {{ .Values.service.healthPort }}
+      targetPort: health
+      protocol: TCP
+    {{- if .Values.metrics.enabled }}
+    - name: metrics
+      port: {{ .Values.service.metricsPort }}
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}

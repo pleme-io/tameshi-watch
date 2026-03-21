@@ -1,0 +1,167 @@
+# tameshi-watch -- continuous compliance ingestion daemon
+
+# -- Number of daemon replicas
+replicaCount: 1
+
+image:
+  # -- Container image repository
+  repository: ghcr.io/pleme-io/tameshi-watch
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag (defaults to chart appVersion)
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+# -- Override the chart name
+nameOverride: ""
+# -- Override the full release name
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Create a ServiceAccount
+  create: true
+  # -- Annotations for the ServiceAccount
+  annotations: {}
+  # -- ServiceAccount name (defaults to fullname)
+  name: ""
+
+# -- Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9090"
+  prometheus.io/path: "/metrics"
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534
+
+# -- Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- Ingestion daemon configuration
+config:
+  # -- Log level (trace, debug, info, warn, error)
+  logLevel: info
+  # -- Log format (json, pretty)
+  logFormat: json
+  # -- Poll intervals (seconds) for each vulnerability/compliance source
+  pollIntervals:
+    nvd: 3600
+    osv: 1800
+    github: 900
+    profiles: 7200
+  # -- External source endpoints
+  endpoints:
+    nvd: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    osv: "https://api.osv.dev/v1/vulns"
+    github: "https://api.github.com/advisories"
+  # -- Internal service endpoints
+  kensa:
+    url: "http://kensa.kensa-system.svc:8080"
+  kanshi:
+    url: "http://kanshi.kanshi-system.svc:8081"
+  # -- Minimum severity threshold to ingest (none, low, medium, high, critical)
+  severityThreshold: medium
+  # -- Ecosystems to track
+  ecosystems:
+    - npm
+    - crates.io
+    - Go
+    - PyPI
+    - NuGet
+
+# -- Persistence for poll state checkpoints
+persistence:
+  # -- Enable persistent storage for poll state
+  enabled: true
+  # -- Storage size
+  size: 1Gi
+  # -- Storage class (empty = default)
+  storageClass: ""
+  # -- Mount path inside the container
+  mountPath: /data/state
+
+# -- Health server
+health:
+  # -- Health check port
+  port: 8081
+
+# -- Metrics
+metrics:
+  # -- Enable Prometheus metrics
+  enabled: true
+  # -- Metrics port
+  port: 9090
+
+# -- Resource requests and limits
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+# -- Service ports
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Health check service port
+  healthPort: 8081
+  # -- Metrics service port
+  metricsPort: 9090
+
+# -- Node selector
+nodeSelector: {}
+
+# -- Tolerations
+tolerations: []
+
+# -- Affinity rules
+affinity: {}
+
+# -- Environment variables from Secrets
+envFrom:
+  # -- Secret containing NVD_API_KEY
+  nvdApiKeySecretRef:
+    name: ""
+    key: NVD_API_KEY
+  # -- Secret containing GITHUB_TOKEN
+  githubTokenSecretRef:
+    name: ""
+    key: GITHUB_TOKEN
+
+# -- Network policy
+networkPolicy:
+  # -- Enable NetworkPolicy
+  enabled: true
+  # -- Egress rules
+  egress:
+    # -- Allow HTTPS to external APIs (NVD, OSV, GitHub)
+    externalApis: true
+    # -- Allow traffic to kensa internal service
+    kensaInternal: true
+  # -- Ingress rules
+  ingress:
+    # -- Allow metrics scraping from prometheus namespace
+    metricsFromPrometheus: true
+    # -- Prometheus namespace label selector
+    prometheusNamespace: monitoring
+
+# -- ServiceMonitor for Prometheus Operator
+serviceMonitor:
+  # -- Enable ServiceMonitor creation
+  enabled: false
+  # -- Scrape interval
+  interval: 30s
+  # -- Additional labels for ServiceMonitor
+  labels: {}

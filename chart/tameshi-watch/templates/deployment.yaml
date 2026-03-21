@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tameshi-watch.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tameshi-watch.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "tameshi-watch.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "tameshi-watch.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "tameshi-watch.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: tameshi-watch
+          image: {{ include "tameshi-watch.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.health.port }}
+              protocol: TCP
+            {{- if .Values.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.metrics.port }}
+              protocol: TCP
+            {{- end }}
+          env:
+            - name: TAMESHI_WATCH_CONFIG
+              value: /etc/tameshi-watch/tameshi-watch.yaml
+            {{- if and .Values.envFrom.nvdApiKeySecretRef.name .Values.envFrom.nvdApiKeySecretRef.key }}
+            - name: NVD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.envFrom.nvdApiKeySecretRef.name }}
+                  key: {{ .Values.envFrom.nvdApiKeySecretRef.key }}
+            {{- end }}
+            {{- if and .Values.envFrom.githubTokenSecretRef.name .Values.envFrom.githubTokenSecretRef.key }}
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.envFrom.githubTokenSecretRef.name }}
+                  key: {{ .Values.envFrom.githubTokenSecretRef.key }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tameshi-watch
+              readOnly: true
+            {{- if .Values.persistence.enabled }}
+            - name: state
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "tameshi-watch.fullname" . }}
+        {{- if .Values.persistence.enabled }}
+        - name: state
+          persistentVolumeClaim:
+            claimName: {{ include "tameshi-watch.fullname" . }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

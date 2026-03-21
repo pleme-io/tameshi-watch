@@ -1,0 +1,52 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "tameshi-watch.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tameshi-watch.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "tameshi-watch.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if .Values.networkPolicy.ingress.metricsFromPrometheus }}
+    # Allow metrics scraping from prometheus namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Values.networkPolicy.ingress.prometheusNamespace }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.metrics.port }}
+    {{- end }}
+  egress:
+    # Allow DNS resolution
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- if .Values.networkPolicy.egress.externalApis }}
+    # Allow HTTPS to external APIs (NVD, OSV, GitHub)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- end }}
+    {{- if .Values.networkPolicy.egress.kensaInternal }}
+    # Allow traffic to kensa internal service
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kensa-system
+      ports:
+        - protocol: TCP
+          port: 8080
+    {{- end }}
+{{- end }}

@@ -1,0 +1,45 @@
+apiVersion: v2
+name: pleme-attestation-framework
+version: 0.1.0
+appVersion: "0.1.0"
+description: Complete tameshi attestation framework — deploys sekiban, kensa, kanshi, and tameshi-watch
+type: application
+home: https://github.com/pleme-io/tameshi
+sources:
+  - https://github.com/pleme-io/tameshi
+  - https://github.com/pleme-io/sekiban
+  - https://github.com/pleme-io/kensa
+  - https://github.com/pleme-io/kanshi
+  - https://github.com/pleme-io/tameshi-watch
+maintainers:
+  - name: pleme-io
+    url: https://github.com/pleme-io
+keywords:
+  - attestation
+  - compliance
+  - integrity
+  - tameshi
+  - security
+  - blake3
+  - nist
+  - oscal
+  - ebpf
+  - supply-chain
+kubeVersion: ">=1.28.0-0"
+dependencies:
+  - name: sekiban
+    version: "~0.1.0"
+    repository: "file://../../../sekiban/chart/sekiban"
+    condition: sekiban.enabled
+  - name: kensa
+    version: "~0.1.0"
+    repository: "file://../../../kensa/chart/kensa"
+    condition: kensa.enabled
+  - name: kanshi
+    version: "~0.1.0"
+    repository: "file://../../../kanshi/chart/kanshi"
+    condition: kanshi.enabled
+  - name: tameshi-watch
+    version: "~0.1.0"
+    repository: "file://../../tameshi-watch"
+    condition: tameshi-watch.enabled

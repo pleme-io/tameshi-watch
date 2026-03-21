@@ -1,0 +1,156 @@
+# pleme-attestation-framework — umbrella chart for tameshi ecosystem
+#
+# Deploys all four attestation components:
+#   sekiban       — K8s admission webhook (integrity gating)
+#   kensa         — compliance engine (NIST 800-53 / OSCAL)
+#   kanshi        — eBPF runtime sentinel (binary verification)
+#   tameshi-watch — vulnerability ingestion daemon (NVD/OSV/GitHub)
+
+# -- Global namespace for the framework
+namespace: pleme-system
+
+# -------------------------------------------------------------------
+# sekiban — Kubernetes integrity gating controller
+# -------------------------------------------------------------------
+sekiban:
+  enabled: true
+  replicaCount: 2
+  config:
+    logLevel: info
+    logFormat: json
+    verificationIntervalSecs: 300
+    auditRetentionDays: 90
+    requeueIntervalSecs: 60
+    gracefulShutdownDelaySecs: 5
+  webhook:
+    enabled: true
+    failurePolicy: Fail
+    timeoutSeconds: 3
+    sideEffects: None
+    reinvocationPolicy: Never
+    tls:
+      method: cert-manager
+      issuerName: sekiban-ca-issuer
+      issuerKind: Issuer
+      secretName: sekiban-webhook-certs
+  service:
+    type: ClusterIP
+    webhookPort: 443
+    apiPort: 8080
+    healthPort: 8081
+    metricsPort: 9090
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+  kensa:
+    enabled: true
+    serviceUrl: "http://kensa.pleme-system.svc:8080"
+
+# -------------------------------------------------------------------
+# kensa — Compliance testing engine
+# -------------------------------------------------------------------
+kensa:
+  enabled: true
+  replicaCount: 1
+  config:
+    logLevel: info
+    logFormat: json
+    baseline: moderate
+    environment: production
+    listenAddr: "0.0.0.0:8080"
+    grpcAddr: "0.0.0.0:50051"
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 1Gi
+  service:
+    type: ClusterIP
+    port: 8080
+    grpcPort: 50051
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  networkPolicy:
+    enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+  sekiban:
+    enabled: true
+    apiUrl: "http://sekiban-webhook.pleme-system.svc:8080"
+
+# -------------------------------------------------------------------
+# kanshi — eBPF runtime integrity sentinel (DaemonSet)
+# -------------------------------------------------------------------
+kanshi:
+  enabled: true
+  enforcement:
+    mode: audit
+    defaultPolicy: audit
+  health:
+    port: 8081
+  metrics:
+    enabled: true
+    port: 9090
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+
+# -------------------------------------------------------------------
+# tameshi-watch — Vulnerability ingestion daemon
+# -------------------------------------------------------------------
+tameshi-watch:
+  enabled: true
+  replicaCount: 1
+  config:
+    logLevel: info
+    logFormat: json
+    pollIntervals:
+      nvd: 3600
+      osv: 1800
+      github: 900
+      profiles: 7200
+    severityThreshold: medium
+    kensa:
+      url: "http://kensa.pleme-system.svc:8080"
+    kanshi:
+      url: "http://kanshi.pleme-system.svc:8081"
+  persistence:
+    enabled: true
+    size: 1Gi
+  health:
+    port: 8081
+  metrics:
+    enabled: true
+    port: 9090
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  networkPolicy:
+    enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s

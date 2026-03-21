@@ -1,0 +1,15 @@
+apiVersion: v2
+name: tameshi-watch
+version: 0.1.0
+appVersion: "0.1.0"
+description: Continuous compliance ingestion daemon for tameshi attestation
+type: application
+keywords:
+  - compliance
+  - vulnerability
+  - attestation
+  - tameshi
+  - ingestion
+maintainers:
+  - name: pleme-io
+    url: https://github.com/pleme-io

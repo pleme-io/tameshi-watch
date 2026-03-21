@@ -1,0 +1,474 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Tameshi Watch Helm Values",
+  "description": "JSON Schema for tameshi-watch Helm chart values",
+  "type": "object",
+  "required": [
+    "replicaCount",
+    "image",
+    "config",
+    "health",
+    "metrics",
+    "service",
+    "resources"
+  ],
+  "properties": {
+    "replicaCount": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of daemon replicas"
+    },
+    "image": {
+      "type": "object",
+      "required": ["repository", "pullPolicy"],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Container image repository"
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"],
+          "description": "Image pull policy"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag (defaults to chart appVersion)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "description": "Image pull secrets for private registries"
+    },
+    "nameOverride": {
+      "type": "string",
+      "description": "Override the chart name"
+    },
+    "fullnameOverride": {
+      "type": "string",
+      "description": "Override the full release name"
+    },
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "description": "Create a ServiceAccount"
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Annotations for the ServiceAccount"
+        },
+        "name": {
+          "type": "string",
+          "description": "ServiceAccount name (defaults to fullname)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "podAnnotations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Pod annotations"
+    },
+    "podSecurityContext": {
+      "type": "object",
+      "properties": {
+        "runAsNonRoot": {
+          "type": "boolean"
+        },
+        "runAsUser": {
+          "type": "integer"
+        },
+        "runAsGroup": {
+          "type": "integer"
+        },
+        "fsGroup": {
+          "type": "integer"
+        }
+      },
+      "description": "Pod security context"
+    },
+    "securityContext": {
+      "type": "object",
+      "properties": {
+        "allowPrivilegeEscalation": {
+          "type": "boolean"
+        },
+        "readOnlyRootFilesystem": {
+          "type": "boolean"
+        },
+        "capabilities": {
+          "type": "object",
+          "properties": {
+            "drop": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "add": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "description": "Container security context"
+    },
+    "config": {
+      "type": "object",
+      "required": [
+        "logLevel",
+        "logFormat",
+        "pollIntervals",
+        "endpoints",
+        "kensa",
+        "severityThreshold",
+        "ecosystems"
+      ],
+      "properties": {
+        "logLevel": {
+          "type": "string",
+          "enum": ["trace", "debug", "info", "warn", "error"],
+          "description": "Log level"
+        },
+        "logFormat": {
+          "type": "string",
+          "enum": ["json", "pretty"],
+          "description": "Log format"
+        },
+        "pollIntervals": {
+          "type": "object",
+          "required": ["nvd", "osv", "github", "profiles"],
+          "properties": {
+            "nvd": {
+              "type": "integer",
+              "minimum": 60,
+              "description": "NVD poll interval in seconds"
+            },
+            "osv": {
+              "type": "integer",
+              "minimum": 60,
+              "description": "OSV poll interval in seconds"
+            },
+            "github": {
+              "type": "integer",
+              "minimum": 60,
+              "description": "GitHub Advisories poll interval in seconds"
+            },
+            "profiles": {
+              "type": "integer",
+              "minimum": 60,
+              "description": "Compliance profiles poll interval in seconds"
+            }
+          },
+          "additionalProperties": false
+        },
+        "endpoints": {
+          "type": "object",
+          "required": ["nvd", "osv", "github"],
+          "properties": {
+            "nvd": {
+              "type": "string",
+              "minLength": 1,
+              "description": "NVD API endpoint"
+            },
+            "osv": {
+              "type": "string",
+              "minLength": 1,
+              "description": "OSV API endpoint"
+            },
+            "github": {
+              "type": "string",
+              "minLength": 1,
+              "description": "GitHub Advisories API endpoint"
+            }
+          },
+          "additionalProperties": false
+        },
+        "kensa": {
+          "type": "object",
+          "required": ["url"],
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Kensa service URL"
+            }
+          },
+          "additionalProperties": false
+        },
+        "kanshi": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Kanshi service URL"
+            }
+          },
+          "additionalProperties": false
+        },
+        "severityThreshold": {
+          "type": "string",
+          "enum": ["none", "low", "medium", "high", "critical"],
+          "description": "Minimum severity threshold to ingest"
+        },
+        "ecosystems": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "description": "Ecosystems to track"
+        }
+      },
+      "additionalProperties": false
+    },
+    "persistence": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable persistent storage for poll state"
+        },
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+(Mi|Gi|Ti)$",
+          "description": "Storage size"
+        },
+        "storageClass": {
+          "type": "string",
+          "description": "Storage class (empty = default)"
+        },
+        "mountPath": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Mount path inside the container"
+        }
+      },
+      "additionalProperties": false
+    },
+    "health": {
+      "type": "object",
+      "required": ["port"],
+      "properties": {
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Health check port"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["enabled", "port"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Prometheus metrics"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Metrics port"
+        }
+      },
+      "additionalProperties": false
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "requests": {
+          "type": "object",
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "description": "CPU request"
+            },
+            "memory": {
+              "type": "string",
+              "description": "Memory request"
+            }
+          }
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "cpu": {
+              "type": "string",
+              "description": "CPU limit"
+            },
+            "memory": {
+              "type": "string",
+              "description": "Memory limit"
+            }
+          }
+        }
+      },
+      "description": "Resource requests and limits"
+    },
+    "service": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["ClusterIP", "NodePort", "LoadBalancer"],
+          "description": "Service type"
+        },
+        "healthPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Health check service port"
+        },
+        "metricsPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "Metrics service port"
+        }
+      },
+      "additionalProperties": false
+    },
+    "nodeSelector": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Node selector"
+    },
+    "tolerations": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Tolerations"
+    },
+    "affinity": {
+      "type": "object",
+      "description": "Affinity rules"
+    },
+    "envFrom": {
+      "type": "object",
+      "properties": {
+        "nvdApiKeySecretRef": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Secret name containing NVD API key"
+            },
+            "key": {
+              "type": "string",
+              "description": "Key within the secret"
+            }
+          },
+          "additionalProperties": false
+        },
+        "githubTokenSecretRef": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Secret name containing GitHub token"
+            },
+            "key": {
+              "type": "string",
+              "description": "Key within the secret"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable NetworkPolicy"
+        },
+        "egress": {
+          "type": "object",
+          "properties": {
+            "externalApis": {
+              "type": "boolean",
+              "description": "Allow HTTPS to external APIs"
+            },
+            "kensaInternal": {
+              "type": "boolean",
+              "description": "Allow traffic to kensa internal service"
+            }
+          },
+          "additionalProperties": false
+        },
+        "ingress": {
+          "type": "object",
+          "properties": {
+            "metricsFromPrometheus": {
+              "type": "boolean",
+              "description": "Allow metrics scraping from prometheus namespace"
+            },
+            "prometheusNamespace": {
+              "type": "string",
+              "description": "Prometheus namespace label selector"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "serviceMonitor": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable ServiceMonitor creation"
+        },
+        "interval": {
+          "type": "string",
+          "pattern": "^[0-9]+(s|m|h)$",
+          "description": "Scrape interval"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Additional labels for ServiceMonitor"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

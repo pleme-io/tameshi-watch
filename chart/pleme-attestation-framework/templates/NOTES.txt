@@ -1,0 +1,71 @@
+Pleme Attestation Framework has been deployed to namespace {{ .Values.namespace }}.
+
+Components:
+{{- if index .Values "sekiban" "enabled" }}
+  [x] sekiban        — K8s admission webhook (integrity gating)
+      Replicas: {{ index .Values "sekiban" "replicaCount" }}
+{{- else }}
+  [ ] sekiban        — DISABLED
+{{- end }}
+{{- if index .Values "kensa" "enabled" }}
+  [x] kensa          — compliance engine (NIST 800-53 / OSCAL)
+      Baseline: {{ index .Values "kensa" "config" "baseline" }}
+{{- else }}
+  [ ] kensa          — DISABLED
+{{- end }}
+{{- if index .Values "kanshi" "enabled" }}
+  [x] kanshi         — eBPF runtime sentinel (DaemonSet on all Linux nodes)
+      Mode: {{ index .Values "kanshi" "enforcement" "mode" }}
+{{- else }}
+  [ ] kanshi         — DISABLED
+{{- end }}
+{{- if index .Values "tameshi-watch" "enabled" }}
+  [x] tameshi-watch  — vulnerability ingestion daemon
+{{- else }}
+  [ ] tameshi-watch  — DISABLED
+{{- end }}
+
+Verification steps:
+
+1. Check all pods are running:
+
+   kubectl get pods -n {{ .Values.namespace }}
+
+2. Verify component health:
+{{- if index .Values "sekiban" "enabled" }}
+
+   # sekiban
+   kubectl get pods -n {{ .Values.namespace }} -l app.kubernetes.io/name=sekiban
+   kubectl get validatingwebhookconfiguration -l app.kubernetes.io/instance={{ .Release.Name }}
+{{- end }}
+{{- if index .Values "kensa" "enabled" }}
+
+   # kensa
+   kubectl get pods -n {{ .Values.namespace }} -l app.kubernetes.io/name=kensa
+   kubectl port-forward -n {{ .Values.namespace }} svc/{{ .Release.Name }}-kensa 8080:8080
+   curl http://127.0.0.1:8080/health
+{{- end }}
+{{- if index .Values "kanshi" "enabled" }}
+
+   # kanshi (DaemonSet — one pod per Linux node)
+   kubectl get ds -n {{ .Values.namespace }} -l app.kubernetes.io/name=kanshi
+{{- end }}
+{{- if index .Values "tameshi-watch" "enabled" }}
+
+   # tameshi-watch
+   kubectl get pods -n {{ .Values.namespace }} -l app.kubernetes.io/name=tameshi-watch
+{{- end }}
+
+3. View CRDs:
+
+   kubectl get signaturegates --all-namespaces
+   kubectl get certifications --all-namespaces
+   kubectl get compliancepolicies --all-namespaces
+
+4. Attestation flow:
+
+   inshou (Nix pre-rebuild) -> tameshi (layer signatures)
+     -> kensa (compliance assessment) -> sekiban (admission gating)
+       -> kanshi (runtime eBPF enforcement) <- tameshi-watch (vuln feed)
+
+For documentation, visit: https://github.com/pleme-io/tameshi

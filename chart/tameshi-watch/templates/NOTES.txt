@@ -1,0 +1,26 @@
+tameshi-watch compliance ingestion daemon has been installed.
+
+1. Check daemon status:
+
+   kubectl get pods -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "tameshi-watch.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+2. View logs:
+
+   kubectl logs -n {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "tameshi-watch.name" . }}" -f
+
+3. Check health:
+
+   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "tameshi-watch.fullname" . }} {{ .Values.service.healthPort }}:{{ .Values.service.healthPort }}
+   curl http://localhost:{{ .Values.service.healthPort }}/healthz
+
+{{- if .Values.metrics.enabled }}
+
+4. Prometheus metrics are available at port {{ .Values.service.metricsPort }} on /metrics
+{{- end }}
+
+{{- if .Values.persistence.enabled }}
+
+5. Poll state is persisted to {{ .Values.persistence.mountPath }} ({{ .Values.persistence.size }} PVC)
+{{- end }}
+
+For documentation, visit: https://github.com/pleme-io/tameshi-watch
