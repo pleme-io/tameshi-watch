@@ -1,0 +1,93 @@
+---
+# Tameshi-Watch — continuous compliance ingestion daemon
+# Polls NVD, OSV, and GitHub advisory feeds for vulnerability data
+# Forwards enriched advisories to kensa for compliance re-evaluation
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tameshi-watch
+  namespace: pleme-attestation
+spec:
+  releaseName: tameshi-watch
+  chart:
+    spec:
+      chart: tameshi-watch
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: pleme-charts
+        namespace: flux-system
+      interval: 5m
+  interval: 5m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    image:
+      repository: ghcr.io/pleme-io/tameshi-watch
+      tag: latest
+
+    replicaCount: 1
+
+    config:
+      logLevel: info
+      logFormat: json
+      pollIntervals:
+        nvd: 3600
+        osv: 1800
+        github: 900
+        profiles: 7200
+      endpoints:
+        nvd: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+        osv: "https://api.osv.dev/v1/vulns"
+        github: "https://api.github.com/advisories"
+      kensa:
+        url: "http://kensa.pleme-attestation.svc:8080"
+      kanshi:
+        url: "http://kanshi.pleme-attestation.svc:8081"
+      severityThreshold: medium
+      ecosystems:
+        - npm
+        - crates.io
+        - Go
+        - PyPI
+        - NuGet
+
+    persistence:
+      enabled: true
+      size: 1Gi
+      storageClass: ""
+      mountPath: /data/state
+
+    health:
+      port: 8081
+
+    metrics:
+      enabled: true
+      port: 9090
+
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      labels:
+        release: prometheus
+
+    networkPolicy:
+      enabled: true
+      egress:
+        externalApis: true
+        kensaInternal: true
+      ingress:
+        metricsFromPrometheus: true
+        prometheusNamespace: monitoring
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi

@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base layer: shared namespace and labels for the tameshi attestation framework
+# All components (sekiban, kensa, kanshi, tameshi-watch) deploy into pleme-attestation
+
+resources:
+  - namespace.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: tameshi
+      app.kubernetes.io/managed-by: fluxcd
+    includeSelectors: false
+    includeTemplates: true

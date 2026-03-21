@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Staging (zek) overlay for tameshi attestation framework
+# All webhooks in audit/ignore mode — never blocks deployments in staging
+
+resources:
+  - ../../base
+  - ../../infrastructure
+
+patches:
+  # Sekiban: audit mode — log violations but do not block
+  - path: patches/sekiban-audit-mode.yaml
+  # Kanshi: audit mode — observe but do not enforce eBPF blocking
+  - path: patches/kanshi-audit-mode.yaml
+
+labels:
+  - pairs:
+      cluster: zek
+      environment: staging
+    includeSelectors: false
+    includeTemplates: true

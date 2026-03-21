@@ -1,0 +1,64 @@
+---
+# Sekiban — K8s integrity gating via ValidatingAdmissionWebhook
+# Validates tameshi attestation signatures before allowing deployments
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sekiban
+  namespace: pleme-attestation
+spec:
+  releaseName: sekiban
+  chart:
+    spec:
+      chart: sekiban
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: pleme-charts
+        namespace: flux-system
+      interval: 5m
+  interval: 5m
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    image:
+      repository: ghcr.io/pleme-io/sekiban
+      tag: latest
+
+    replicaCount: 2
+
+    webhook:
+      enabled: true
+      timeoutSeconds: 3
+      sideEffects: None
+      reinvocationPolicy: Never
+      namespaceSelector:
+        matchLabels:
+          sekiban.pleme.io/enforce: "true"
+
+    certificate:
+      enabled: true
+      issuerRef:
+        name: selfsigned-issuer
+        kind: ClusterIssuer
+
+    pdb:
+      enabled: true
+      minAvailable: 1
+
+    monitoring:
+      enabled: true
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

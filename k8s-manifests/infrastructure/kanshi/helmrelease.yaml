@@ -1,0 +1,84 @@
+---
+# Kanshi — eBPF runtime integrity sentinel
+# Uses LSM hooks to verify binary integrity at execution time
+# Watches SignatureGate CRDs and populates BPF hash maps
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kanshi
+  namespace: pleme-attestation
+spec:
+  releaseName: kanshi
+  chart:
+    spec:
+      chart: kanshi
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: pleme-charts
+        namespace: flux-system
+      interval: 5m
+  interval: 5m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    image:
+      repository: ghcr.io/pleme-io/kanshi
+      tag: latest
+
+    # DaemonSet — runs on every Linux node
+    enforcement:
+      mode: audit
+      defaultPolicy: audit
+
+    maps:
+      allowMapSize: 1048576
+      revocationMapSize: 65536
+      policyMapSize: 4096
+
+    health:
+      port: 8081
+
+    metrics:
+      enabled: true
+      port: 9090
+
+    heartbeat:
+      enabled: true
+      emitter: noop
+
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      labels:
+        release: prometheus
+
+    # eBPF requires elevated capabilities (not full privileged)
+    securityContext:
+      privileged: false
+      capabilities:
+        add:
+          - SYS_ADMIN
+          - SYS_RESOURCE
+          - NET_ADMIN
+
+    # Linux only — eBPF not available on other OSes
+    nodeSelector:
+      kubernetes.io/os: linux
+
+    # Tolerate all taints so kanshi runs on every node
+    tolerations:
+      - operator: Exists
+        effect: NoSchedule
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

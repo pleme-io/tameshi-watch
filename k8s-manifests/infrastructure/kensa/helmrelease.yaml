@@ -1,0 +1,77 @@
+---
+# Kensa — compliance testing engine
+# NIST 800-53/OSCAL assessments with deterministic BLAKE3 hashing
+# Produces the compliance hash that combines with the master untested signature
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kensa
+  namespace: pleme-attestation
+spec:
+  releaseName: kensa
+  chart:
+    spec:
+      chart: kensa
+      version: "0.1.0"
+      sourceRef:
+        kind: HelmRepository
+        name: pleme-charts
+        namespace: flux-system
+      interval: 5m
+  interval: 5m
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    image:
+      repository: ghcr.io/pleme-io/kensa
+      tag: latest
+
+    replicaCount: 1
+
+    config:
+      logLevel: info
+      logFormat: json
+      baseline: moderate
+      environment: production
+      listenAddr: "0.0.0.0:8080"
+      grpcAddr: "0.0.0.0:50051"
+
+    persistence:
+      enabled: true
+      storageClass: ""
+      accessMode: ReadWriteOnce
+      size: 1Gi
+
+    service:
+      type: ClusterIP
+      port: 8080
+      grpcPort: 50051
+
+    # Integration with sekiban for certification
+    sekiban:
+      enabled: true
+      apiUrl: "http://sekiban.pleme-attestation.svc:8080"
+
+    monitoring:
+      enabled: true
+
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      labels:
+        release: prometheus
+
+    networkPolicy:
+      enabled: true
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi

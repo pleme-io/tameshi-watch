@@ -1,0 +1,21 @@
+---
+# Staging: kanshi eBPF in audit mode
+# Observes binary integrity but does not block execution
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kanshi
+  namespace: pleme-attestation
+spec:
+  values:
+    enforcement:
+      mode: audit
+      defaultPolicy: audit
+
+    heartbeat:
+      enabled: false
+      emitter: noop
+
+    nodeSelector:
+      kubernetes.io/os: linux
+      kubernetes.io/hostname: zek

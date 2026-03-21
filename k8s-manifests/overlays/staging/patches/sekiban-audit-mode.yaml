@@ -1,0 +1,29 @@
+---
+# Staging: sekiban webhook in audit mode
+# Failures are logged but do not block deployments
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: sekiban
+  namespace: pleme-attestation
+spec:
+  values:
+    replicaCount: 1
+
+    webhook:
+      failurePolicy: Ignore
+
+    config:
+      enforcementMode: audit
+
+    pdb:
+      enabled: false
+
+    nodeSelector:
+      kubernetes.io/hostname: zek
+
+    tolerations:
+      - key: environment
+        operator: Equal
+        value: staging
+        effect: NoSchedule

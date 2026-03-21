@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Production (plo) overlay for tameshi attestation framework
+# Sekiban webhook in enforce mode — blocks unsigned deployments
+# Kanshi eBPF in enforce mode — blocks unattested binaries at runtime
+
+resources:
+  - ../../base
+  - ../../infrastructure
+
+patches:
+  # Sekiban: enforce mode — block deployments without valid signatures
+  - path: patches/sekiban-enforce-mode.yaml
+  # Kanshi: enforce mode — block unattested binaries via LSM hooks
+  - path: patches/kanshi-enforce-mode.yaml
+
+labels:
+  - pairs:
+      cluster: plo
+      environment: production
+    includeSelectors: false
+    includeTemplates: true
