@@ -1,9 +1,5 @@
 use std::path::PathBuf;
 
-use figment::{
-    Figment,
-    providers::{Env, Format, Serialized, Yaml},
-};
 use serde::{Deserialize, Serialize};
 
 use crate::event::CveSeverity;
@@ -116,16 +112,14 @@ impl Config {
     /// # Errors
     ///
     /// Returns an error if the configuration cannot be extracted.
-    pub fn load(config_path: Option<&str>) -> Result<Self, figment::Error> {
-        let mut figment = Figment::from(Serialized::defaults(Self::default()));
+    pub fn load(config_path: Option<&str>) -> Result<Self, shikumi::ShikumiError> {
+        let mut chain = shikumi::ProviderChain::new().with_defaults(&Self::default());
 
         if let Some(path) = config_path {
-            figment = figment.merge(Yaml::file(path));
+            chain = chain.with_file(std::path::Path::new(path));
         }
 
-        figment
-            .merge(Env::prefixed("TAMESHI_WATCH_").split("_"))
-            .extract()
+        chain.with_env("TAMESHI_WATCH_").extract()
     }
 }
 
