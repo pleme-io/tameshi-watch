@@ -76,8 +76,10 @@ async fn run_daemon(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
 
     info!("daemon started (placeholder — no sources configured yet)");
 
-    // For now, just wait for ctrl+c
-    tokio::signal::ctrl_c().await?;
+    // SIGTERM/SIGINT handler shared across pleme-io daemons. Poll tasks
+    // + pipeline will each take a `shutdown.token()` when they land.
+    let shutdown = tsunagu::ShutdownController::install();
+    shutdown.token().wait().await;
     info!("shutdown signal received");
 
     Ok(())
